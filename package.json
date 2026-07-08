@@ -1,0 +1,28 @@
+{
+  "name": "sleep-and-journey-api",
+  "version": "1.0.0",
+  "description": "Sleep&Journey reservation API - booking + availability example (POST /bookings with room-level locking)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "migrate": "for f in src/migrations/*.sql; do echo \"-- running $f\"; psql \"$DATABASE_URL\" -f \"$f\" || exit 1; done",
+    "seed:staff": "node scripts/seed-staff.js",
+    "jobs:release-expired-holds": "node src/jobs/releaseExpiredHolds.js",
+    "jobs:cleanup-rate-limit-logs": "node src/jobs/cleanupRateLimitLogs.js",
+    "test": "jest",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.5",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
+  }
+}

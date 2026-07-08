@@ -1,0 +1,78 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # A real PostgreSQL instance, started as a sidecar container for the
+    # whole job. GitHub Actions won't let job steps proceed until the
+    # health check below passes, so there's no manual "wait for Postgres"
+    # step needed.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sleep_and_journey_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # DATABASE_URL_TEST is what tests/setup/env.js prefers (see the
+    # Automated tests section of the README) - this keeps CI and local
+    # testing pointed at a test-only database the exact same way.
+    # JWT_ACCESS_SECRET only needs to be *some* value here; it's never
+    # used for anything beyond this job's own token signing/verification.
+    env:
+      DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/sleep_and_journey_test
+      JWT_ACCESS_SECRET: ci_test_secret_do_not_use_in_prod
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Requires package-lock.json to be committed - run `npm install`
+      # locally once and commit the lockfile it generates if you haven't
+      # already, so CI installs the exact same dependency versions every run.
+      - name: Install dependencies
+        run: npm ci
+
+      # ubuntu-latest runners normally ship with the Postgres client
+      # already, but this keeps the workflow portable to other runner
+      # images (e.g. a self-hosted runner) without silently failing later.
+      - name: Ensure psql is available
+        run: |
+          if ! command -v psql &> /dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+
+      - name: Run database migrations against the test database
+        run: |
+          for f in src/migrations/*.sql; do
+            echo "-- running $f"
+            psql "$DATABASE_URL_TEST" -f "$f"
+          done
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Run integration tests
+        run: npm run test:integration

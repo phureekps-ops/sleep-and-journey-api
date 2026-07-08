@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Environment files with real secrets - only the .example versions get committed
+.env
+.env.test
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS/editor cruft
+.DS_Store
+.vscode/
+.idea/
+
+# Test/coverage output
+coverage/
