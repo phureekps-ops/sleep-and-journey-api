@@ -54,22 +54,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ubuntu-latest runners normally ship with the Postgres client
-      # already, but this keeps the workflow portable to other runner
-      # images (e.g. a self-hosted runner) without silently failing later.
-      - name: Ensure psql is available
-        run: |
-          if ! command -v psql &> /dev/null; then
-            sudo apt-get update
-            sudo apt-get install -y postgresql-client
-          fi
-
+      # scripts/migrate.js runs every src/migrations/*.sql file through the
+      # `pg` driver directly (no `psql` CLI dependency), so this works on any
+      # runner/host without needing the Postgres client tools installed.
       - name: Run database migrations against the test database
-        run: |
-          for f in src/migrations/*.sql; do
-            echo "-- running $f"
-            psql "$DATABASE_URL_TEST" -f "$f"
-          done
+        run: npm run migrate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL_TEST }}
 
       - name: Run unit tests
         run: npm run test:unit
