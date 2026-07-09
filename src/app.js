@@ -36,6 +36,24 @@ app.use(
   })
 );
 
+// CORS: lets browser-based frontends (like the demo page, or any other
+// site) call this API directly. Written by hand instead of pulling in the
+// `cors` package so this fix is a one-file change - no package-lock.json
+// regeneration or extra `npm install` needed before redeploying.
+// Wide open (`*`) is fine here because every endpoint that touches
+// sensitive data already requires its own Bearer token - CORS only
+// controls which *browser pages* may read the response, it's not a
+// substitute for authentication.
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Idempotency-Key');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 app.get('/', (req, res) => {
   res.json({
     name: 'Sleep&Journey Reservation API',
