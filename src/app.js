@@ -36,6 +36,16 @@ app.use(
   })
 );
 
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Sleep&Journey Reservation API',
+    status: 'ok',
+    health_check: '/health',
+    api_base: '/v1',
+    docs: 'https://github.com/<your-username>/sleep-and-journey-api#readme',
+  });
+});
+
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use('/v1', availabilityRoutes);
