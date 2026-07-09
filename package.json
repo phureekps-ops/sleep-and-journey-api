@@ -5,7 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "migrate": "for f in src/migrations/*.sql; do echo \"-- running $f\"; psql \"$DATABASE_URL\" -f \"$f\" || exit 1; done",
+    "migrate": "node scripts/migrate.js",
     "seed:staff": "node scripts/seed-staff.js",
     "jobs:release-expired-holds": "node src/jobs/releaseExpiredHolds.js",
     "jobs:cleanup-rate-limit-logs": "node src/jobs/cleanupRateLimitLogs.js",
