@@ -61,7 +61,7 @@ app.get('/', (req, res) => {
     status: 'ok',
     health_check: '/health',
     api_base: '/v1',
-    docs: 'https://github.com/<your-username>/sleep-and-journey-api#readme',
+    docs: docs: 'https://github.com/phureekps-ops/sleep-and-journey-api#readme',
   });
 });
 
