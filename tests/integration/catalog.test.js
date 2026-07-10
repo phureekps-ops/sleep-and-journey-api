@@ -348,4 +348,88 @@ describe('catalog - admin content entry (hq_admin only)', () => {
     const publicRes = await request(app).get(`/v1/room-types/${roomTypeId}?lang=en`);
     expect(publicRes.body.images[0].alt_text).toBe('Bedroom');
   });
+
+  test('hq_admin can edit a branch\'s own Thai fields (description, star rating, cover photo)', async () => {
+    const token = await hqAdminToken();
+
+    const res = await request(app)
+      .patch(`/v1/admin/branches/${branchId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ description: 'ที่พักริมทะเลบรรยากาศดี', star_rating: 4, cover_image_url: 'https://example.com/cover.jpg' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.description).toBe('ที่พักริมทะเลบรรยากาศดี');
+    expect(res.body.star_rating).toBe(4);
+
+    // and the public read reflects it immediately - no separate publish step
+    const publicRes = await request(app).get(`/v1/branches/${branchId}`);
+    expect(publicRes.body.description).toBe('ที่พักริมทะเลบรรยากาศดี');
+    expect(publicRes.body.star_rating).toBe(4);
+  });
+
+  test('rejects an out-of-range star_rating', async () => {
+    const token = await hqAdminToken();
+
+    const res = await request(app)
+      .patch(`/v1/admin/branches/${branchId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ star_rating: 7 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('404s when editing a branch that does not exist', async () => {
+    const token = await hqAdminToken();
+
+    const res = await request(app)
+      .patch('/v1/admin/branches/00000000-0000-0000-0000-000000000000')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ description: 'ไม่มีจริง' });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('HOTEL_NOT_FOUND');
+  });
+
+  test('a branch_manager cannot edit branch details', async () => {
+    await insertStaff({ role: 'branch_manager', branchId, email: 'mgr2@test.com' });
+    const token = await loginStaff('mgr2@test.com');
+
+    const res = await request(app)
+      .patch(`/v1/admin/branches/${branchId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ description: 'พยายามแก้เอง' });
+
+    expect(res.status).toBe(403);
+  });
+
+  test('hq_admin can edit a room type\'s own Thai fields (price, size, bed setup)', async () => {
+    const token = await hqAdminToken();
+
+    const res = await request(app)
+      .patch(`/v1/admin/room-types/${roomTypeId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ description: 'ห้องกว้างวิวสวน', base_price: 2500, size_sqm: 32, bed_type: 'King' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.description).toBe('ห้องกว้างวิวสวน');
+    expect(Number(res.body.base_price)).toBe(2500);
+    expect(Number(res.body.size_sqm)).toBe(32);
+    expect(res.body.bed_type).toBe('King');
+
+    const publicRes = await request(app).get(`/v1/room-types/${roomTypeId}`);
+    expect(publicRes.body.description).toBe('ห้องกว้างวิวสวน');
+  });
+
+  test('404s when editing a room type that does not exist', async () => {
+    const token = await hqAdminToken();
+
+    const res = await request(app)
+      .patch('/v1/admin/room-types/00000000-0000-0000-0000-000000000000')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ description: 'ไม่มีจริง' });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('ROOM_TYPE_NOT_FOUND');
+  });
 });

@@ -388,7 +388,79 @@ async function listBranches(languageCode, { region } = {}) {
   return result.rows.map((row) => ({ ...row, language: lang }));
 }
 
+/**
+ * PATCH /v1/admin/branches/:id
+ * Edits the branch's own (Thai/base) fields directly - description,
+ * star rating, cover photo, check-in/out times. Distinct from
+ * upsertBranchTranslation, which only ever writes EN/ZH/JA overlay rows.
+ */
+async function updateBranchDetails(branchId, fields) {
+  const { name, description, star_rating, cover_image_url, check_in_time, check_out_time } = fields;
+
+  if (star_rating != null && (star_rating < 1 || star_rating > 5)) {
+    throw new AppError(400, 'VALIDATION_ERROR', 'star_rating ต้องอยู่ระหว่าง 1-5');
+  }
+
+  const existing = await pool.query('SELECT id FROM branches WHERE id = $1', [branchId]);
+  if (existing.rows.length === 0) {
+    throw new AppError(404, 'HOTEL_NOT_FOUND', 'ไม่พบโรงแรมนี้');
+  }
+
+  const result = await pool.query(
+    `UPDATE branches SET
+       name = COALESCE($2, name),
+       description = COALESCE($3, description),
+       star_rating = COALESCE($4, star_rating),
+       cover_image_url = COALESCE($5, cover_image_url),
+       check_in_time = COALESCE($6, check_in_time),
+       check_out_time = COALESCE($7, check_out_time)
+     WHERE id = $1
+     RETURNING id, name, description, star_rating, cover_image_url, check_in_time, check_out_time, province, region`,
+    [branchId, name, description, star_rating, cover_image_url, check_in_time, check_out_time]
+  );
+  return result.rows[0];
+}
+
+/**
+ * PATCH /v1/admin/room-types/:id
+ * Edits the room type's own (Thai/base) fields - name, description, price,
+ * size, bed setup, occupancy, view, smoking policy.
+ */
+async function updateRoomTypeDetails(roomTypeId, fields) {
+  const {
+    name, description, base_price, size_sqm, bed_type, bed_count,
+    max_adults, max_children, view_type, smoking_allowed,
+  } = fields;
+
+  const existing = await pool.query('SELECT id FROM room_types WHERE id = $1', [roomTypeId]);
+  if (existing.rows.length === 0) {
+    throw new AppError(404, 'ROOM_TYPE_NOT_FOUND', 'ไม่พบประเภทห้องนี้');
+  }
+
+  const result = await pool.query(
+    `UPDATE room_types SET
+       name = COALESCE($2, name),
+       description = COALESCE($3, description),
+       base_price = COALESCE($4, base_price),
+       size_sqm = COALESCE($5, size_sqm),
+       bed_type = COALESCE($6, bed_type),
+       bed_count = COALESCE($7, bed_count),
+       max_adults = COALESCE($8, max_adults),
+       max_children = COALESCE($9, max_children),
+       view_type = COALESCE($10, view_type),
+       smoking_allowed = COALESCE($11, smoking_allowed)
+     WHERE id = $1
+     RETURNING id, branch_id, name, description, base_price, size_sqm, bed_type,
+               bed_count, max_adults, max_children, view_type, smoking_allowed`,
+    [roomTypeId, name, description, base_price, size_sqm, bed_type, bed_count,
+     max_adults, max_children, view_type, smoking_allowed]
+  );
+  return result.rows[0];
+}
+
 module.exports = {
+  updateBranchDetails,
+  updateRoomTypeDetails,
   getHotelDetails,
   getRoomTypeDetails,
   listBranches,

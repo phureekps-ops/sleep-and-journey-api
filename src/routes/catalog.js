@@ -44,6 +44,36 @@ router.get('/room-types/:id', async (req, res, next) => {
 // simple until there's an actual content-editor role in use.)
 // ---------------------------------------------------------------------------
 
+// PATCH /v1/admin/branches/:id  body: any subset of { name, description, star_rating, cover_image_url, check_in_time, check_out_time }
+router.patch(
+  '/admin/branches/:id',
+  requireAuth,
+  requireRole('hq_admin'),
+  async (req, res, next) => {
+    try {
+      const branch = await catalogService.updateBranchDetails(req.params.id, req.body);
+      res.json(branch);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// PATCH /v1/admin/room-types/:id  body: any subset of { name, description, base_price, size_sqm, bed_type, bed_count, max_adults, max_children, view_type, smoking_allowed }
+router.patch(
+  '/admin/room-types/:id',
+  requireAuth,
+  requireRole('hq_admin'),
+  async (req, res, next) => {
+    try {
+      const roomType = await catalogService.updateRoomTypeDetails(req.params.id, req.body);
+      res.json(roomType);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // POST /v1/admin/branches/:id/translations  body: { language_code, name, description }
 router.post(
   '/admin/branches/:id/translations',
