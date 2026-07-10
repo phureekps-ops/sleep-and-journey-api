@@ -7,6 +7,16 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 // Public reads
 // ---------------------------------------------------------------------------
 
+// GET /v1/branches?lang=en&region=เหนือ
+router.get('/branches', async (req, res, next) => {
+  try {
+    const branches = await catalogService.listBranches(req.query.lang, { region: req.query.region });
+    res.json({ data: branches });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /v1/branches/:id?lang=en
 router.get('/branches/:id', async (req, res, next) => {
   try {

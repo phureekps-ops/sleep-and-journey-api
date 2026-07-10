@@ -119,6 +119,32 @@ describe('catalog - public reads', () => {
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('ROOM_TYPE_NOT_FOUND');
   });
+
+  test('GET /v1/branches lists active branches with their cheapest room price', async () => {
+    await createRoomType(branchId, { basePrice: 1500 });
+    await createRoomType(branchId, { basePrice: 900 }); // cheaper - should win as from_price
+
+    const res = await request(app).get('/v1/branches');
+
+    expect(res.status).toBe(200);
+    const listed = res.body.data.find((b) => b.id === branchId);
+    expect(listed).toBeDefined();
+    expect(listed.name).toBe('สาขาทดสอบ');
+    expect(Number(listed.from_price)).toBe(900); // cheapest of the room types created, not the first one
+  });
+
+  test('GET /v1/branches?region=... filters, and an inactive branch never appears', async () => {
+    const northBranch = await createBranch({ name: 'สาขาเหนือ', region: 'เหนือ' });
+    const southBranch = await createBranch({ name: 'สาขาใต้', region: 'ใต้' });
+    await pool.query(`INSERT INTO branches (id, name, province, region, status) VALUES (gen_random_uuid(), 'ปิดปรับปรุง', 'ทดสอบ', 'เหนือ', 'inactive')`);
+
+    const res = await request(app).get('/v1/branches?region=เหนือ');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.some((b) => b.id === northBranch)).toBe(true);
+    expect(res.body.data.some((b) => b.id === southBranch)).toBe(false);
+    expect(res.body.data.every((b) => b.name !== 'ปิดปรับปรุง')).toBe(true); // inactive branch excluded
+  });
 });
 
 describe('catalog - admin content entry (hq_admin only)', () => {

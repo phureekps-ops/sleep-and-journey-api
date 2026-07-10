@@ -351,9 +351,47 @@ async function upsertImageAltTranslation(roomTypeId, imageId, { language_code, a
   return result.rows[0];
 }
 
+/**
+ * GET /v1/branches?lang=en&region=เหนือ
+ * Listing for the homepage grid: every active branch, translated name,
+ * and its cheapest room type's price as a "starting from" figure. Kept
+ * separate from getHotelDetails (which is the single-branch deep page) -
+ * this one is intentionally light so the homepage grid loads fast.
+ */
+async function listBranches(languageCode, { region } = {}) {
+  const lang = resolveLanguage(languageCode);
+
+  const params = [lang];
+  const whereClauses = [`b.status = 'active'`];
+  if (region && region !== 'ทั้งหมด') {
+    params.push(region);
+    whereClauses.push(`b.region = $${params.length}`);
+  }
+
+  const result = await pool.query(
+    `SELECT
+       b.id,
+       COALESCE(bt.name, b.name) AS name,
+       b.province,
+       b.region,
+       b.star_rating,
+       b.cover_image_url,
+       (SELECT MIN(rt.base_price) FROM room_types rt WHERE rt.branch_id = b.id) AS from_price
+     FROM branches b
+     LEFT JOIN branch_translations bt
+       ON bt.branch_id = b.id AND bt.language_code = $1
+     WHERE ${whereClauses.join(' AND ')}
+     ORDER BY b.province`,
+    params
+  );
+
+  return result.rows.map((row) => ({ ...row, language: lang }));
+}
+
 module.exports = {
   getHotelDetails,
   getRoomTypeDetails,
+  listBranches,
   resolveLanguage,
   SUPPORTED_LANGUAGES,
   DEFAULT_LANGUAGE,
