@@ -9,6 +9,7 @@ const guestRoutes = require('./routes/guests');
 const loyaltyRoutes = require('./routes/loyalty');
 const adminBookingsRoutes = require('./routes/adminBookings');
 const adminStaffRoutes = require('./routes/adminStaff');
+const catalogRoutes = require('./routes/catalog');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -76,7 +77,7 @@ app.use('/v1', guestRoutes);
 app.use('/v1', loyaltyRoutes);
 app.use('/v1', adminBookingsRoutes);
 app.use('/v1', adminStaffRoutes);
-
+app.use('/v1', catalogRoutes);
 app.use((req, res) => {
   res.status(404).json({ error: { code: 'NOT_FOUND', message: 'ไม่พบ endpoint นี้' } });
 });
